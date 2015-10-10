@@ -2,6 +2,9 @@ import stackexchange
 import re
 import html
 import itertools
+import subprocess
+import sys
+
 
 max_requests_per_run = 20
 api_key = 'R91Ul6Hz*Reptmjm52BPHQ(('
@@ -29,17 +32,31 @@ def fetch_code_blocks(searchterms, max_requests=None):
             yield from [(source, c) for c in found]
 
 
-def test_code_block(block, tests):
+def test_code_block(block, regex, tests):
     """
     Try to mangle the code block into something that compiles & runs then check
     the test cases against it. If it worked return the source code string that
     successfully passed the tests. Otherwise return None.
     """
-    return "just kidding"
+    if sys.platform in ['linux', 'linux2', 'darwin']:
+        runstring = './testcsharp.exe'
+    else:
+        runstring = 'testcsharp.exe'
+
+    proc = subprocess.Popen([runstring, block, regex], stdout=subprocess.PIPE,
+                                                       stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    if proc.returncode == 0:
+        return out
+    else:
+        return None
 
 
 def run():
     keywords = input('keywords: ').split()
+
+    regex = input('now enter a regex the console output must match: ')
+
     tests = []
     print('now enter test cases for the desired function f (e.g. f(3) == 42)')
     for i in itertools.count():
@@ -48,11 +65,16 @@ def run():
             break
         tests.append(expr)
 
-    for block in fetch_code_blocks(keywords, max_requests_per_run):
-        result = test_code_block(block, tests)
+    for src, block in fetch_code_blocks(keywords, max_requests_per_run):
+        #print('===found code block===')
+        #print(block)
+        #print('')
+        result = test_code_block(block, regex, tests)
         if result is not None:
-            print('=== We did it! ===')
-            print(result)
+            print('===== Match found =====')
+            result = result.decode('utf-8')
+            print('url: {}\n code: \n{}\n'.format(src.url, result))
+            print('======End match ========')
             break
 
 
