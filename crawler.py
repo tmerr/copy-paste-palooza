@@ -38,7 +38,7 @@ def fetch_code_blocks(lang, searchterms, max_requests=None):
             yield from [(source, c) for c in found]
 
 
-def test_code_block(lang, block, regex, tests):
+def test_code_block(lang, block, regex):
     """
     Try to mangle the code block into something that compiles & runs then check
     the test cases against it. If it worked return the source code string that
@@ -60,7 +60,22 @@ def test_code_block(lang, block, regex, tests):
         return None
 
 
-def run():
+def run_args(lang, keywords, regex):
+    if lang not in languages:
+        print('error: not a known language')
+        return
+
+    for src, block in fetch_code_blocks(lang, keywords, max_requests_per_run):
+        result = test_code_block(lang, block, regex)
+        if result is not None:
+            result = result.decode('utf-8')
+            print('// url: {}'.format(src.url))
+            print('// code:\n{}'.format(result))
+            break
+
+
+
+def run_noargs():
     lang = input('language: ')
     if lang not in languages:
         print('error: not a known language')
@@ -70,22 +85,12 @@ def run():
 
     regex = input('now enter a regex the console output must match: ')
 
-    tests = []
-    print('now enter test cases for the desired function f (e.g. f(3) == 42)')
-    for i in itertools.count():
-        expr = input('test case {}: '.format(i+1))
-        if expr.strip() == 'q':
-            break
-        tests.append(expr)
-
-    for src, block in fetch_code_blocks(lang, keywords, max_requests_per_run):
-        result = test_code_block(lang, block, regex, tests)
-        if result is not None:
-            result = result.decode('utf-8')
-            print('// url: {}'.format(src.url))
-            print('// code:\n{}'.format(result))
-            break
+    run_args(lang, keywords, regex)
 
 
 if __name__ == '__main__':
-    run()
+    if len(sys.argv) >= 4:
+        _, lang, keywords, regex, *_ = sys.argv
+        run_args(lang, keywords, regex)
+    elif len(sys.argv) == 1:
+        run_noargs()
