@@ -12,13 +12,19 @@ so = stackexchange.Site(stackexchange.StackOverflow, api_key)
 so.include_body = True
 
 
-def fetch_code_blocks(searchterms, max_requests=None):
+languages = {
+    'C#old': (['C#'], 'testcsharp.exe'),
+    'C#' : (['C#'], 'roslyn_csharp.exe')
+}
+
+
+def fetch_code_blocks(lang, searchterms, max_requests=None):
     """
     loads stack overflow questions,
     and extracts all code blocks contained therein.
     yields [(source1, codeblock1), ..., (sourceM, codeblockM)]
     """
-    tags = ["C#"]
+    tags, _ = languages[lang]
     questions = so.search(intitle=searchterms, tagged=';'.join(tags))
     if max_requests:
         # we only want to load max_requests - 1 questions since we already used
@@ -32,16 +38,18 @@ def fetch_code_blocks(searchterms, max_requests=None):
             yield from [(source, c) for c in found]
 
 
-def test_code_block(block, regex, tests):
+def test_code_block(lang, block, regex, tests):
     """
     Try to mangle the code block into something that compiles & runs then check
     the test cases against it. If it worked return the source code string that
     successfully passed the tests. Otherwise return None.
     """
+    _, runstring = languages[lang]
+
     if sys.platform in ['linux', 'linux2', 'darwin']:
-        runstring = './testcsharp.exe'
+        runstring = './' + runstring
     else:
-        runstring = 'testcsharp.exe'
+        runstring = runstring
 
     proc = subprocess.Popen([runstring, block, regex], stdout=subprocess.PIPE,
                                                        stderr=subprocess.PIPE)
@@ -53,6 +61,11 @@ def test_code_block(block, regex, tests):
 
 
 def run():
+    lang = input('language: ')
+    if lang not in languages:
+        print('error: not a known language')
+        return
+
     keywords = input('keywords: ').split()
 
     regex = input('now enter a regex the console output must match: ')
@@ -65,13 +78,12 @@ def run():
             break
         tests.append(expr)
 
-    for src, block in fetch_code_blocks(keywords, max_requests_per_run):
-        result = test_code_block(block, regex, tests)
+    for src, block in fetch_code_blocks(lang, keywords, max_requests_per_run):
+        result = test_code_block(lang, block, regex, tests)
         if result is not None:
-            print('===== Match found =====')
             result = result.decode('utf-8')
-            print('url: {}\n code: \n{}\n'.format(src.url, result))
-            print('======End match ========')
+            print('// url: {}'.format(src.url))
+            print('// code:\n{}'.format(result))
             break
 
 
