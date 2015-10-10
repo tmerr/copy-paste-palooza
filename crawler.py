@@ -66,9 +66,6 @@ def run():
         tests.append(expr)
 
     for src, block in fetch_code_blocks(keywords, max_requests_per_run):
-        #print('===found code block===')
-        #print(block)
-        #print('')
         result = test_code_block(block, regex, tests)
         if result is not None:
             print('===== Match found =====')
