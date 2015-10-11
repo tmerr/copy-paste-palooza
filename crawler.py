@@ -65,14 +65,17 @@ def run_args(lang, keywords, regex):
         print('error: not a known language')
         return
 
+    count = 0
     for src, block in fetch_code_blocks(lang, keywords, max_requests_per_run):
         result = test_code_block(lang, block, regex)
         if result is not None:
             result = result.decode('utf-8')
             print('// url: {}'.format(src.url))
             print('// code:\n{}'.format(result))
-            break
+            return
+        count += 1
 
+    print("failed to find a match in any of {} code blocks".format(count))
 
 
 def run_noargs():
@@ -80,11 +83,8 @@ def run_noargs():
     if lang not in languages:
         print('error: not a known language')
         return
-
     keywords = input('keywords: ').split()
-
     regex = input('now enter a regex the console output must match: ')
-
     run_args(lang, keywords, regex)
 
 
